@@ -5,14 +5,16 @@ metadata:
 
 manifests:
   rawYaml:
-    - manifests/namespace.yaml
     - manifests/dapr-configuration.yaml
 
 deploy:
   kubectl:
-    defaultNamespace: monitoring
+    defaultNamespace: mathtrail
 
   helm:
+    flags:
+      install: ["--timeout", "10m"]
+      upgrade: ["--timeout", "10m"]
     releases:
       # 1. Deploy LGTM stack first (foundation with Alloy receiver)
       - name: lgtm
@@ -20,9 +22,8 @@ deploy:
         remoteChart: k8s-monitoring
         version: 3.8.0
         namespace: monitoring
-        createNamespace: true
+        createNamespace: false
         wait: true
-        timeout: 10m
         valuesFiles:
           - values/lgtm-values.yaml
 
@@ -34,7 +35,6 @@ deploy:
         namespace: monitoring
         createNamespace: false
         wait: true
-        timeout: 5m
         valuesFiles:
           - values/pyroscope-values.yaml
 
@@ -46,7 +46,6 @@ deploy:
         namespace: monitoring
         createNamespace: false
         wait: true
-        timeout: 5m
         valuesFiles:
           - values/otel-collector-values.yaml
 

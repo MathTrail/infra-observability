@@ -180,9 +180,6 @@ config:
         exporters: [otlp/alloy, debug]
 
 # RBAC - required for k8sattributes processor
-rbac:
-  create: true
-
 serviceAccount:
   create: true
   name: otel-collector
