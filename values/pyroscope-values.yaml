@@ -53,22 +53,15 @@ pyroscope:
     create: true
     name: pyroscope
 
-  # Configuration
+  # Configuration for Grafana Pyroscope 1.x
   config: |
-    # Storage backend (local for development)
     storage:
-      backend: badger
-      badger:
-        directory: /var/lib/pyroscope
-        no-sync: false
+      backend: filesystem
+      filesystem:
+        dir: /data
 
-    # Server configuration
-    server:
-      http-listen-address: :4040
-
-    # Retention
-    retention-policy:
-      max-age: 7d
+    limits:
+      max_query_length: 7d
 
 # MinIO (optional, for production object storage)
 minio:

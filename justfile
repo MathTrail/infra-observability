@@ -1,16 +1,23 @@
 # MathTrail Observability Stack
 
-# Default recipe
-default:
-    @just --list
+# Ensure namespaces exist (idempotent)
+setup:
+    kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create namespace mathtrail --dry-run=client -o yaml | kubectl apply -f -
 
 # Deploy observability stack
-deploy:
+deploy: setup
     skaffold run
 
-# Delete observability stack
+# Delete observability stack (namespace preserved to avoid finalizer deadlock)
 delete:
     skaffold delete
+    @echo "Stack removed. Namespace 'monitoring' preserved."
+
+# Full purge: delete stack then remove namespaces
+purge: delete
+    kubectl delete namespace monitoring --wait --timeout=120s
+    @echo "Namespace 'monitoring' deleted."
 
 # Restart OTel Collector
 restart-otel:

@@ -4,15 +4,26 @@
 cluster:
   name: "mathtrail-local"
 
-# Destinations for telemetry (for production, these would be Cloud endpoints)
-# For local dev, we use the embedded backends
-destinations: []
+# Destinations for telemetry — local embedded backends
+destinations:
+  - name: local-mimir
+    type: prometheus
+    url: http://mimir:9009/api/v1/push
+  - name: local-loki
+    type: loki
+    url: http://loki:3100/loki/api/v1/push
+  - name: local-tempo
+    type: otlp
+    url: http://tempo:4317
 
 # Enable Grafana Alloy receiver for application observability
 applicationObservability:
   enabled: true
   collector: alloy-receiver
-  destinations: []
+  destinations:
+    - local-mimir
+    - local-loki
+    - local-tempo
   receivers:
     # OTLP receiver - this is where OTel Collector sends data
     otlp:
@@ -27,19 +38,22 @@ applicationObservability:
 podLogs:
   enabled: true
   collector: alloy-logs
-  destinations: []
+  destinations:
+    - local-loki
 
 # Enable cluster metrics
 clusterMetrics:
   enabled: true
   collector: alloy-metrics
-  destinations: []
+  destinations:
+    - local-mimir
 
 # Enable cluster events
 clusterEvents:
   enabled: true
   collector: alloy-singleton
-  destinations: []
+  destinations:
+    - local-loki
 
 # Grafana configuration
 grafana:
@@ -235,6 +249,17 @@ alloy-receiver:
     limits:
       cpu: "1000m"
       memory: "1Gi"
+
+# Alloy singleton configuration (required for cluster events)
+alloy-singleton:
+  enabled: true
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
 
 # Alloy logs configuration
 alloy-logs:
