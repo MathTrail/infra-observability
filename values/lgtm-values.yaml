@@ -1,0 +1,261 @@
+# Grafana k8s-monitoring (LGTM Stack)
+# Includes: Loki, Tempo, Mimir, Grafana, Alloy
+
+cluster:
+  name: "mathtrail-local"
+
+# Destinations for telemetry (for production, these would be Cloud endpoints)
+# For local dev, we use the embedded backends
+destinations: []
+
+# Enable Grafana Alloy receiver for application observability
+applicationObservability:
+  enabled: true
+  collector: alloy-receiver
+  destinations: []
+  receivers:
+    # OTLP receiver - this is where OTel Collector sends data
+    otlp:
+      grpc:
+        enabled: true
+        port: 4317
+      http:
+        enabled: true
+        port: 4318
+
+# Enable pod logs collection
+podLogs:
+  enabled: true
+  collector: alloy-logs
+  destinations: []
+
+# Enable cluster metrics
+clusterMetrics:
+  enabled: true
+  collector: alloy-metrics
+  destinations: []
+
+# Enable cluster events
+clusterEvents:
+  enabled: true
+  collector: alloy-singleton
+  destinations: []
+
+# Grafana configuration
+grafana:
+  enabled: true
+  adminPassword: "mathtrail"  # Change in production!
+  service:
+    type: ClusterIP
+    port: 80
+
+  persistence:
+    enabled: true
+    size: 1Gi
+
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        # Loki datasource
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://loki:3100
+          isDefault: false
+          jsonData:
+            maxLines: 1000
+
+        # Tempo datasource
+        - name: Tempo
+          type: tempo
+          access: proxy
+          url: http://tempo:3200
+          isDefault: false
+          jsonData:
+            httpMethod: GET
+            serviceMap:
+              datasourceUid: prometheus
+
+        # Mimir datasource (Prometheus-compatible)
+        - name: Mimir
+          type: prometheus
+          access: proxy
+          url: http://mimir:9009/prometheus
+          isDefault: true
+          jsonData:
+            httpMethod: POST
+
+        # Pyroscope datasource
+        - name: Pyroscope
+          type: grafana-pyroscope-datasource
+          access: proxy
+          url: http://pyroscope:4040
+          isDefault: false
+
+  # Grafana plugins
+  plugins:
+    - grafana-pyroscope-datasource
+
+  # Pre-configured dashboards (optional)
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+# Loki configuration
+loki:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 5Gi
+
+  loki:
+    auth_enabled: false
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+
+    ingester:
+      chunk_idle_period: 3m
+      chunk_block_size: 262144
+      chunk_retain_period: 1m
+      max_transfer_retries: 0
+      wal:
+        dir: /var/loki/wal
+
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      max_cache_freshness_per_query: 10m
+      split_queries_by_interval: 15m
+      max_query_parallelism: 32
+
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    storage_config:
+      filesystem:
+        directory: /var/loki/chunks
+      tsdb_shipper:
+        active_index_directory: /var/loki/tsdb-index
+        cache_location: /var/loki/tsdb-cache
+
+# Tempo configuration
+tempo:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 5Gi
+
+  tempo:
+    server:
+      http_listen_port: 3200
+
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+
+    ingester:
+      max_block_duration: 5m
+
+    compactor:
+      compaction:
+        block_retention: 48h
+
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+
+    metrics_generator:
+      enabled: true
+      storage:
+        path: /var/tempo/generator/wal
+
+# Mimir configuration
+mimir:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 5Gi
+
+  mimir:
+    structuredConfig:
+      server:
+        http_listen_port: 9009
+        grpc_listen_port: 9095
+
+      limits:
+        max_query_lookback: 30d
+        max_query_parallelism: 32
+
+      blocks_storage:
+        backend: filesystem
+        filesystem:
+          dir: /var/mimir/data
+
+        tsdb:
+          dir: /var/mimir/tsdb
+          retention_period: 7d
+
+# Alloy receiver configuration
+alloy-receiver:
+  enabled: true
+  replicas: 2
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# Alloy logs configuration
+alloy-logs:
+  enabled: true
+  mode: daemonset
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# Alloy metrics configuration
+alloy-metrics:
+  enabled: true
+  mode: daemonset
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"

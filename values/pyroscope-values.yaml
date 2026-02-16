@@ -1,0 +1,82 @@
+# Pyroscope for MathTrail
+# Continuous profiling for Go services
+
+pyroscope:
+  replicaCount: 1
+
+  image:
+    repository: grafana/pyroscope
+    tag: "1.18.1"
+    pullPolicy: IfNotPresent
+
+  extraArgs:
+    log.level: info
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 4040
+    port_name: http2
+
+  # Resources
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+  # Persistence for profiles
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+
+  # Security context
+  podSecurityContext:
+    fsGroup: 10001
+    runAsUser: 10001
+    runAsNonRoot: true
+
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: false  # Pyroscope needs to write to disk
+    runAsNonRoot: true
+    runAsUser: 10001
+
+  # Service account
+  serviceAccount:
+    create: true
+    name: pyroscope
+
+  # Configuration
+  config: |
+    # Storage backend (local for development)
+    storage:
+      backend: badger
+      badger:
+        directory: /var/lib/pyroscope
+        no-sync: false
+
+    # Server configuration
+    server:
+      http-listen-address: :4040
+
+    # Retention
+    retention-policy:
+      max-age: 7d
+
+# MinIO (optional, for production object storage)
+minio:
+  enabled: false
+  # In production, configure S3-compatible storage:
+  # enabled: true
+  # buckets:
+  #   - name: pyroscope-data
+  #     policy: none
+  # rootUser: admin
+  # rootPassword: changeme

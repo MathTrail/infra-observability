@@ -1,0 +1,13 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: mathtrail-observability
+  namespace: mathtrail
+spec:
+  tracing:
+    samplingRate: "1"
+    zipkin:
+      endpointAddress: "http://otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:9411/api/v2/spans"
+
+  metric:
+    enabled: true

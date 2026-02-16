@@ -1,0 +1,71 @@
+apiVersion: skaffold/v4beta12
+kind: Config
+metadata:
+  name: mathtrail-infra-observability
+
+manifests:
+  rawYaml:
+    - manifests/namespace.yaml
+    - manifests/dapr-configuration.yaml
+
+deploy:
+  kubectl:
+    defaultNamespace: monitoring
+
+  helm:
+    releases:
+      # 1. Deploy LGTM stack first (foundation with Alloy receiver)
+      - name: lgtm
+        repo: https://MathTrail.github.io/charts/charts
+        remoteChart: k8s-monitoring
+        version: 3.8.0
+        namespace: monitoring
+        createNamespace: true
+        wait: true
+        timeout: 10m
+        valuesFiles:
+          - values/lgtm-values.yaml
+
+      # 2. Deploy Pyroscope (independent)
+      - name: pyroscope
+        repo: https://MathTrail.github.io/charts/charts
+        remoteChart: pyroscope
+        version: 1.18.1
+        namespace: monitoring
+        createNamespace: false
+        wait: true
+        timeout: 5m
+        valuesFiles:
+          - values/pyroscope-values.yaml
+
+      # 3. Deploy OTel Collector last (depends on Alloy being ready)
+      - name: otel-collector
+        repo: https://MathTrail.github.io/charts/charts
+        remoteChart: opentelemetry-collector
+        version: 0.145.0
+        namespace: monitoring
+        createNamespace: false
+        wait: true
+        timeout: 5m
+        valuesFiles:
+          - values/otel-collector-values.yaml
+
+# Port forwarding for local access
+portForward:
+  - resourceType: service
+    resourceName: lgtm-grafana
+    namespace: monitoring
+    port: 80
+    localPort: 3000
+
+  - resourceType: service
+    resourceName: pyroscope
+    namespace: monitoring
+    port: 4040
+    localPort: 4040
+
+  - resourceType: service
+    resourceName: otel-collector-opentelemetry-collector
+    namespace: monitoring
+    port: 9411
+    localPort: 9411
