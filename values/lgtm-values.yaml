@@ -130,6 +130,19 @@ grafana:
   plugins:
     - grafana-pyroscope-datasource
 
+  # Sidecar: auto-discover dashboards from ConfigMaps across all namespaces.
+  # Any ConfigMap with label grafana_dashboard=1 is mounted automatically.
+  # Use annotation grafana_folder to place it in a named folder.
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+      label: grafana_dashboard
+      labelValue: "1"
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+
   # Pre-configured dashboards (optional)
   dashboardProviders:
     dashboardproviders.yaml:
