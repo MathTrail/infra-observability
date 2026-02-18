@@ -6,6 +6,7 @@ metadata:
 manifests:
   rawYaml:
     - manifests/dapr-configuration.yaml
+    - manifests/network-policies.yaml
 
 deploy:
   kubectl:

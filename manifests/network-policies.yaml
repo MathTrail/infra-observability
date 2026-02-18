@@ -1,0 +1,74 @@
+# NetworkPolicies for the monitoring namespace
+# Controls traffic between monitoring and mathtrail namespaces.
+
+---
+# Allow Oathkeeper (mathtrail) to reach Grafana and Pyroscope (monitoring)
+# Oathkeeper strips the path and forwards browser requests to these services.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-oathkeeper-ingress
+  namespace: monitoring
+spec:
+  podSelector: {}  # applies to all pods in monitoring
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: mathtrail
+      ports:
+        - protocol: TCP
+          port: 80    # Grafana HTTP
+        - protocol: TCP
+          port: 4040  # Pyroscope
+
+---
+# Allow mentor-api (mathtrail) to push telemetry to OTel Collector (monitoring)
+# mentor-api sends OTLP traces via gRPC to the collector.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-telemetry-ingress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: mathtrail
+      ports:
+        - protocol: TCP
+          port: 4317  # OTLP gRPC
+        - protocol: TCP
+          port: 4318  # OTLP HTTP
+        - protocol: TCP
+          port: 9411  # Zipkin (Dapr)
+
+---
+# Allow Alloy (monitoring) to scrape Prometheus metrics from mathtrail pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-alloy-scrape-egress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: alloy
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: mathtrail
+      ports:
+        - protocol: TCP
+          port: 8080  # app metrics port

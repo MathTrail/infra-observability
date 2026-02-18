@@ -63,6 +63,25 @@ grafana:
     type: ClusterIP
     port: 80
 
+  grafana.ini:
+    server:
+      # Oathkeeper strips /observability/grafana prefix, but Grafana must know
+      # its public root to generate correct redirect URLs and asset links.
+      root_url: "%(protocol)s://%(domain)s/observability/grafana/"
+      serve_from_sub_path: true
+    auth.proxy:
+      # Trust the X-Webauth-User header injected by Oathkeeper after Kratos session check.
+      # Users are auto-created on first login; no Hydra OAuth2 client needed.
+      enabled: true
+      header_name: X-Webauth-User
+      header_property: username
+      auto_sign_up: true
+      # Map X-Webauth-Role → Grafana org role (Admin / Editor / Viewer)
+      headers: "Role:X-Webauth-Role"
+    users:
+      auto_assign_org: true
+      auto_assign_org_role: Viewer
+
   persistence:
     enabled: true
     size: 1Gi
