@@ -10,7 +10,7 @@ manifests:
 
 deploy:
   kubectl:
-    defaultNamespace: mathtrail
+    defaultNamespace: ${NAMESPACE}
 
   helm:
     flags:
@@ -19,7 +19,7 @@ deploy:
     releases:
       # 1. Deploy LGTM stack first (foundation with Alloy receiver)
       - name: lgtm
-        repo: https://MathTrail.github.io/charts/charts
+        repo: ${CHARTS_REPO}
         remoteChart: k8s-monitoring
         version: 3.8.0
         namespace: monitoring
@@ -30,7 +30,7 @@ deploy:
 
       # 2. Deploy Pyroscope (independent)
       - name: pyroscope
-        repo: https://MathTrail.github.io/charts/charts
+        repo: ${CHARTS_REPO}
         remoteChart: pyroscope
         version: 1.18.1
         namespace: monitoring
@@ -41,7 +41,7 @@ deploy:
 
       # 3. Deploy OTel Collector last (depends on Alloy being ready)
       - name: otel-collector
-        repo: https://MathTrail.github.io/charts/charts
+        repo: ${CHARTS_REPO}
         remoteChart: opentelemetry-collector
         version: 0.145.0
         namespace: monitoring
