@@ -1,67 +1,49 @@
 # MathTrail Observability Stack
 
-# Ensure namespaces exist (idempotent)
-setup:
-    kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-    kubectl create namespace mathtrail --dry-run=client -o yaml | kubectl apply -f -
+monitoring_ns := env("MONITORING_NAMESPACE", "monitoring")
+app_ns := env("NAMESPACE", "mathtrail")
 
 # Deploy observability stack
-deploy: setup
+deploy:
     skaffold run
 
-# Delete observability stack (namespace preserved to avoid finalizer deadlock)
+# Delete observability stack and namespace
 delete:
     skaffold delete
-    @echo "Stack removed. Namespace 'monitoring' preserved."
-
-# Full purge: delete stack then remove namespaces
-purge: delete
-    kubectl delete namespace monitoring --wait --timeout=120s
-    @echo "Namespace 'monitoring' deleted."
-
-# Restart OTel Collector
-restart-otel:
-    kubectl rollout restart deployment/otel-collector-opentelemetry-collector -n monitoring
-
-# Restart LGTM stack
-restart-lgtm:
-    kubectl rollout restart deployment/lgtm-grafana -n monitoring
-    kubectl rollout restart statefulset/loki -n monitoring || true
-    kubectl rollout restart statefulset/tempo -n monitoring || true
-    kubectl rollout restart statefulset/mimir -n monitoring || true
+    kubectl delete namespace {{monitoring_ns}} --wait --timeout=120s
 
 # Port-forward to Grafana
 grafana:
-    kubectl port-forward -n monitoring svc/lgtm-grafana 3000:80
+    kubectl port-forward -n {{monitoring_ns}} svc/lgtm-grafana 3000:80
 
 # Port-forward to Pyroscope
 pyroscope:
-    kubectl port-forward -n monitoring svc/pyroscope 4040:4040
+    kubectl port-forward -n {{monitoring_ns}} svc/pyroscope 4040:4040
 
 # View OTel Collector logs
 logs-otel:
-    kubectl logs -n monitoring deployment/otel-collector-opentelemetry-collector -f
+    kubectl logs -n {{monitoring_ns}} deployment/otel-collector-opentelemetry-collector -f
 
 # View Grafana logs
 logs-grafana:
-    kubectl logs -n monitoring deployment/lgtm-grafana -f
+    kubectl logs -n {{monitoring_ns}} deployment/lgtm-grafana -f
 
 # Check health
 health:
     @echo "=== Pods ==="
-    kubectl get pods -n monitoring
+    kubectl get pods -n {{monitoring_ns}}
     @echo ""
     @echo "=== Services ==="
-    kubectl get svc -n monitoring
+    kubectl get svc -n {{monitoring_ns}}
     @echo ""
     @echo "=== Dapr Configuration ==="
-    kubectl get configuration -n mathtrail
+    kubectl get configuration -n {{app_ns}}
 
 # Test OTel Collector endpoint
 test-otel:
     #!/usr/bin/env bash
     set -euo pipefail
-    kubectl port-forward -n monitoring svc/otel-collector-opentelemetry-collector 13133:13133 &
+    kubectl port-forward -n {{monitoring_ns}} svc/otel-collector-opentelemetry-collector 13133:13133 &
     PID=$!
     sleep 2
     curl -s http://localhost:13133/health || true

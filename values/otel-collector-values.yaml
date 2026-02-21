@@ -135,7 +135,7 @@ config:
   exporters:
     # Export to Grafana Alloy (LGTM ingestion point)
     otlp/alloy:
-      endpoint: "lgtm-alloy-receiver.monitoring.svc.cluster.local:4317"
+      endpoint: ""  # overridden by skaffold setValueTemplates
       tls:
         insecure: true
       sending_queue:
