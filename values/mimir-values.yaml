@@ -1,0 +1,53 @@
+# Mimir — metrics storage backend (monolithic mode for dev)
+fullnameOverride: mimir
+
+deploymentMode: monolithic
+
+monolithic:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 5Gi
+
+mimir:
+  structuredConfig:
+    server:
+      http_listen_port: 9009
+      grpc_listen_port: 9095
+
+    limits:
+      max_query_lookback: 30d
+      max_query_parallelism: 32
+
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /data
+
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/blocks
+      tsdb:
+        dir: /data/tsdb
+        retention_period: 7d
+
+# Disable components not needed in monolithic mode
+ingester:
+  zoneAwareReplication:
+    enabled: false
+
+store_gateway:
+  zoneAwareReplication:
+    enabled: false
+
+ruler:
+  enabled: false
+
+alertmanager:
+  enabled: false
+
+# Gateway not needed — monolithic exposes all APIs directly
+nginx:
+  enabled: false

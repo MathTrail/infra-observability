@@ -28,8 +28,52 @@ deploy:
       install: ["--timeout", "10m"]
       upgrade: ["--timeout", "10m"]
     releases:
-      # 1. Deploy LGTM stack (foundation with Alloy receiver)
-      - name: lgtm
+      # 1. Loki — log storage
+      - name: loki
+        repo: "{{.CHARTS_REPO}}"
+        remoteChart: loki
+        version: 6.53.0
+        namespace: "{{.MONITORING_NAMESPACE}}"
+        createNamespace: false
+        wait: true
+        valuesFiles:
+          - values/loki-values.yaml
+
+      # 2. Tempo — trace storage
+      - name: tempo
+        repo: "{{.CHARTS_REPO}}"
+        remoteChart: tempo
+        version: 1.24.4
+        namespace: "{{.MONITORING_NAMESPACE}}"
+        createNamespace: false
+        wait: true
+        valuesFiles:
+          - values/tempo-values.yaml
+
+      # 3. Mimir — metrics storage
+      - name: mimir
+        repo: "{{.CHARTS_REPO}}"
+        remoteChart: mimir-distributed
+        version: 6.0.5
+        namespace: "{{.MONITORING_NAMESPACE}}"
+        createNamespace: false
+        wait: true
+        valuesFiles:
+          - values/mimir-values.yaml
+
+      # 4. Grafana — observability UI
+      - name: grafana
+        repo: "{{.CHARTS_REPO}}"
+        remoteChart: grafana
+        version: 10.5.15
+        namespace: "{{.MONITORING_NAMESPACE}}"
+        createNamespace: false
+        wait: true
+        valuesFiles:
+          - values/grafana-values.yaml
+
+      # 5. Alloy collectors (k8s-monitoring) — ships data to backends
+      - name: alloy
         repo: "{{.CHARTS_REPO}}"
         remoteChart: k8s-monitoring
         version: 3.8.0
@@ -37,9 +81,9 @@ deploy:
         createNamespace: false
         wait: true
         valuesFiles:
-          - values/lgtm-values.yaml
+          - values/alloy-values.yaml
 
-      # 2. Deploy Pyroscope (independent)
+      # 6. Pyroscope — continuous profiling
       - name: pyroscope
         repo: "{{.CHARTS_REPO}}"
         remoteChart: pyroscope
@@ -50,7 +94,7 @@ deploy:
         valuesFiles:
           - values/pyroscope-values.yaml
 
-      # 3. Deploy OTel Collector last (depends on Alloy being ready)
+      # 7. OTel Collector — receives from Dapr, sends to Alloy
       - name: otel-collector
         repo: "{{.CHARTS_REPO}}"
         remoteChart: opentelemetry-collector

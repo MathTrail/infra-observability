@@ -1,0 +1,66 @@
+# Loki — log storage backend
+fullnameOverride: loki
+
+deploymentMode: SingleBinary
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 5Gi
+
+loki:
+  auth_enabled: false
+
+  server:
+    http_listen_port: 3100
+    grpc_listen_port: 9096
+
+  ingester:
+    chunk_idle_period: 3m
+    chunk_block_size: 262144
+    chunk_retain_period: 1m
+    max_transfer_retries: 0
+    wal:
+      dir: /var/loki/wal
+
+  limits_config:
+    enforce_metric_name: false
+    reject_old_samples: true
+    reject_old_samples_max_age: 168h
+    max_cache_freshness_per_query: 10m
+    split_queries_by_interval: 15m
+    max_query_parallelism: 32
+
+  storage:
+    type: filesystem
+    bucketNames:
+      chunks: chunks
+      ruler: ruler
+      admin: admin
+
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
+# Disable components not needed in SingleBinary mode
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+minio:
+  enabled: false
+gateway:
+  enabled: false
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0

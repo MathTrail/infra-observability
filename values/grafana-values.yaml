@@ -1,0 +1,98 @@
+# Grafana — UI for Loki, Tempo, Mimir, Pyroscope
+fullnameOverride: lgtm-grafana
+
+adminPassword: "mathtrail"  # Change in production!
+
+service:
+  type: ClusterIP
+  port: 80
+
+grafana.ini:
+  server:
+    # Oathkeeper strips /observability/grafana prefix, but Grafana must know
+    # its public root to generate correct redirect URLs and asset links.
+    root_url: "%(protocol)s://%(domain)s/observability/grafana/"
+    serve_from_sub_path: true
+  auth.proxy:
+    # Trust the X-Webauth-User header injected by Oathkeeper after Kratos session check.
+    # Users are auto-created on first login; no Hydra OAuth2 client needed.
+    enabled: true
+    header_name: X-Webauth-User
+    header_property: username
+    auto_sign_up: true
+    # Map X-Webauth-Role → Grafana org role (Admin / Editor / Viewer)
+    headers: "Role:X-Webauth-Role"
+  users:
+    auto_assign_org: true
+    auto_assign_org_role: Viewer
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki:3100
+        isDefault: false
+        jsonData:
+          maxLines: 1000
+
+      - name: Tempo
+        type: tempo
+        access: proxy
+        url: http://tempo:3200
+        isDefault: false
+        jsonData:
+          httpMethod: GET
+          serviceMap:
+            datasourceUid: prometheus
+
+      - name: Mimir
+        type: prometheus
+        access: proxy
+        url: http://mimir:9009/prometheus
+        isDefault: true
+        jsonData:
+          httpMethod: POST
+
+      - name: Pyroscope
+        type: grafana-pyroscope-datasource
+        access: proxy
+        url: http://pyroscope:4040
+        isDefault: false
+
+# Grafana plugins
+plugins:
+  - grafana-pyroscope-datasource
+
+# Sidecar: auto-discover dashboards from ConfigMaps across all namespaces.
+# Any ConfigMap with label grafana_dashboard=1 is mounted automatically.
+# Use annotation grafana_folder to place it in a named folder.
+sidecar:
+  dashboards:
+    enabled: true
+    searchNamespace: ALL
+    label: grafana_dashboard
+    labelValue: "1"
+    folderAnnotation: grafana_folder
+    provider:
+      foldersFromFilesStructure: true
+
+# Pre-configured dashboards
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
