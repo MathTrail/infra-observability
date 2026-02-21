@@ -23,7 +23,7 @@ mimir:
       storage:
         backend: filesystem
         filesystem:
-          dir: /data
+          dir: /data/mimir
 
     blocks_storage:
       backend: filesystem
@@ -31,7 +31,10 @@ mimir:
         dir: /data/blocks
       tsdb:
         dir: /data/tsdb
-        retention_period: 7d
+        retention_period: 168h
+
+    compactor:
+      data_dir: /data/compactor
 
 # Disable components not needed in monolithic mode
 ingester:
