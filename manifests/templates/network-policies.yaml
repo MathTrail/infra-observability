@@ -1,23 +1,25 @@
-# NetworkPolicies for the {{.MONITORING_NAMESPACE}} namespace
-# Controls traffic between {{.MONITORING_NAMESPACE}} and {{.NAMESPACE}} namespaces.
+{{- $ns := .Values.namespace -}}
+{{- $monitoring := .Values.monitoringNamespace -}}
+# NetworkPolicies for the {{ $monitoring }} namespace
+# Controls traffic between {{ $monitoring }} and {{ $ns }} namespaces.
 
 ---
-# Allow Oathkeeper ({{.NAMESPACE}}) to reach Grafana and Pyroscope ({{.MONITORING_NAMESPACE}})
+# Allow Oathkeeper ({{ $ns }}) to reach Grafana and Pyroscope ({{ $monitoring }})
 # Oathkeeper strips the path and forwards browser requests to these services.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-oathkeeper-ingress
-  namespace: "{{.MONITORING_NAMESPACE}}"
+  namespace: {{ $monitoring }}
 spec:
-  podSelector: {}  # applies to all pods in {{.MONITORING_NAMESPACE}}
+  podSelector: {}  # applies to all pods in {{ $monitoring }}
   policyTypes:
     - Ingress
   ingress:
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: "{{.NAMESPACE}}"
+              kubernetes.io/metadata.name: {{ $ns }}
       ports:
         - protocol: TCP
           port: 80    # Grafana HTTP
@@ -25,13 +27,13 @@ spec:
           port: 4040  # Pyroscope
 
 ---
-# Allow mentor-api ({{.NAMESPACE}}) to push telemetry to OTel Collector ({{.MONITORING_NAMESPACE}})
-# mentor-api sends OTLP traces via gRPC to the collector.
+# Allow {{ $ns }} pods to push telemetry to OTel Collector ({{ $monitoring }})
+# App services send OTLP traces via gRPC to the collector.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-telemetry-ingress
-  namespace: "{{.MONITORING_NAMESPACE}}"
+  namespace: {{ $monitoring }}
 spec:
   podSelector:
     matchLabels:
@@ -42,7 +44,7 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: "{{.NAMESPACE}}"
+              kubernetes.io/metadata.name: {{ $ns }}
       ports:
         - protocol: TCP
           port: 4317  # OTLP gRPC
@@ -52,12 +54,12 @@ spec:
           port: 9411  # Zipkin (Dapr)
 
 ---
-# Allow Alloy ({{.MONITORING_NAMESPACE}}) to scrape Prometheus metrics from {{.NAMESPACE}} pods
+# Allow Alloy ({{ $monitoring }}) to scrape Prometheus metrics from {{ $ns }} pods
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-alloy-scrape-egress
-  namespace: "{{.MONITORING_NAMESPACE}}"
+  namespace: {{ $monitoring }}
 spec:
   podSelector:
     matchLabels:
@@ -68,7 +70,7 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: "{{.NAMESPACE}}"
+              kubernetes.io/metadata.name: {{ $ns }}
       ports:
         - protocol: TCP
           port: 8080  # app metrics port
