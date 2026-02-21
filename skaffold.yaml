@@ -1,29 +1,33 @@
 apiVersion: skaffold/v4beta13
 kind: Config
 metadata:
-  name: mathtrail-infra-observability
-
-manifests: {}
+  name: infra-base
 
 deploy:
-  kubectl:
-    defaultNamespace: "{{.NAMESPACE}}"
-
   helm:
-    flags:
-      install: ["--timeout", "10m"]
-      upgrade: ["--timeout", "10m"]
     releases:
-      # 0. Deploy base infra manifests (namespace, network policies, Dapr config)
+      # Namespace, network policies, Dapr config
       - name: infra-base
         chartPath: manifests/
-        namespace: "{{.MONITORING_NAMESPACE}}"
-        createNamespace: true
         wait: true
         setValueTemplates:
           namespace: "{{.NAMESPACE}}"
           monitoringNamespace: "{{.MONITORING_NAMESPACE}}"
 
+---
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: mathtrail-infra-observability
+requires:
+  - configs: [infra-base]
+
+deploy:
+  helm:
+    flags:
+      install: ["--timeout", "10m"]
+      upgrade: ["--timeout", "10m"]
+    releases:
       # 1. Deploy LGTM stack (foundation with Alloy receiver)
       - name: lgtm
         repo: "{{.CHARTS_REPO}}"
