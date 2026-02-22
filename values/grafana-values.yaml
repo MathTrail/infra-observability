@@ -3,16 +3,26 @@ fullnameOverride: lgtm-grafana
 
 adminPassword: "mathtrail"  # Change in production!
 
+# Disable the init container that runs chown (requires root, fails on k3d PVCs)
+initChownData:
+  enabled: false
+
+# Run Grafana as its own user; fsGroup ensures PVC files are group-writable
+securityContext:
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
 service:
   type: ClusterIP
   port: 80
 
 grafana.ini:
   server:
-    # Oathkeeper strips /observability/grafana prefix, but Grafana must know
-    # its public root to generate correct redirect URLs and asset links.
-    root_url: "%(protocol)s://%(domain)s/observability/grafana/"
-    serve_from_sub_path: true
+    # In production Oathkeeper strips /observability/grafana prefix.
+    # For dev port-forward, Grafana serves at /.
+    root_url: "%(protocol)s://%(domain)s/"
+    serve_from_sub_path: false
   auth.proxy:
     # Trust the X-Webauth-User header injected by Oathkeeper after Kratos session check.
     # Users are auto-created on first login; no Hydra OAuth2 client needed.
