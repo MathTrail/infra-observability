@@ -19,6 +19,10 @@ mimir:
     ingest_storage:
       enabled: false
 
+    # Re-enable classic Push gRPC (chart disables it for Kafka ingest path)
+    ingester:
+      push_grpc_method_enabled: true
+
     limits:
       max_query_lookback: 720h
       max_query_parallelism: 32

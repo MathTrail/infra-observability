@@ -11,6 +11,8 @@ deploy:
 delete:
     skaffold delete
     kubectl delete namespace {{monitoring_ns}} --wait --timeout=120s
+    @echo "Waiting for namespace to fully terminate..."
+    kubectl wait --for=delete namespace/{{monitoring_ns}} --timeout=120s 2>/dev/null || true
 
 # Port-forward to Grafana
 grafana:
