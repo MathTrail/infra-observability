@@ -4,15 +4,35 @@
 # Controls traffic between {{ $monitoring }} and {{ $ns }} namespaces.
 
 ---
-# Allow Oathkeeper ({{ $ns }}) to reach Grafana and Pyroscope ({{ $monitoring }})
-# Oathkeeper strips the path and forwards browser requests to these services.
+# Allow all intra-namespace ingress within {{ $monitoring }}.
+# Observability components (Alloy, Loki, Tempo, Mimir, MinIO, etc.) need to
+# communicate freely with each other.
+# NOTE: Only Ingress is restricted here. Egress is left open so that all pods
+# can reach CoreDNS (kube-system) and external endpoints.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-oathkeeper-ingress
+  name: allow-intra-namespace
   namespace: {{ $monitoring }}
 spec:
-  podSelector: {}  # applies to all pods in {{ $monitoring }}
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+
+---
+# Allow Oathkeeper ({{ $ns }}) to reach Grafana ({{ $monitoring }})
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-oathkeeper-grafana-ingress
+  namespace: {{ $monitoring }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
   policyTypes:
     - Ingress
   ingress:
@@ -22,9 +42,29 @@ spec:
               kubernetes.io/metadata.name: {{ $ns }}
       ports:
         - protocol: TCP
-          port: 80    # Grafana HTTP
+          port: 80
+
+---
+# Allow Oathkeeper ({{ $ns }}) to reach Pyroscope ({{ $monitoring }})
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-oathkeeper-pyroscope-ingress
+  namespace: {{ $monitoring }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: pyroscope
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $ns }}
+      ports:
         - protocol: TCP
-          port: 4040  # Pyroscope
+          port: 4040
 
 ---
 # Allow {{ $ns }} pods to push telemetry to OTel Collector ({{ $monitoring }})
@@ -54,7 +94,8 @@ spec:
           port: 9411  # Zipkin (Dapr)
 
 ---
-# Allow Alloy ({{ $monitoring }}) to scrape Prometheus metrics from {{ $ns }} pods
+# Allow Alloy ({{ $monitoring }}) to scrape Prometheus metrics from {{ $ns }} pods,
+# resolve DNS, and push telemetry to backends within {{ $monitoring }}.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -67,10 +108,20 @@ spec:
   policyTypes:
     - Egress
   egress:
+    # DNS resolution (CoreDNS in kube-system)
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Scrape app metrics in {{ $ns }}
     - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ $ns }}
       ports:
         - protocol: TCP
-          port: 8080  # app metrics port
+          port: 8080
+    # Push to Loki, Tempo, Mimir within {{ $monitoring }}
+    - to:
+        - podSelector: {}
