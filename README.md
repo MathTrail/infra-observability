@@ -5,13 +5,13 @@ Observability infrastructure for the MathTrail platform — includes OpenTelemet
 ## Architecture
 
 ```
-Dapr Sidecars → Zipkin (9411) → OTel Collector → k8sattributes → OTLP → Grafana Alloy → LGTM Stack
+Services → Zipkin (9411) → OTel Collector → k8sattributes → OTLP → Grafana Alloy → LGTM Stack
 Services → OTLP (4317/4318) → OTel Collector → k8sattributes → OTLP → Grafana Alloy → LGTM Stack
 Go Services → Pyroscope SDK → Pyroscope (4040) → Grafana
 ```
 
 **Components:**
-- **OpenTelemetry Collector**: Smart gateway receiving Zipkin traces from Dapr, OTLP from services
+- **OpenTelemetry Collector**: Smart gateway receiving Zipkin traces and OTLP from services
 - **Grafana LGTM**: Loki (logs), Tempo (traces), Mimir (metrics), Grafana (visualization)
 - **Pyroscope**: Continuous profiling for Go services
 - **Namespace**: monitoring
@@ -54,21 +54,15 @@ skaffold run
 
 ## Service Integration
 
-### Dapr Tracing
+### OpenTelemetry Tracing
 
-Services with Dapr sidecars automatically send traces once the Dapr Configuration is applied. The configuration points Dapr to the OTel Collector:
+Services send traces via Zipkin or OTLP to the OTel Collector. Configure the Zipkin endpoint in your service:
 
 ```yaml
-# manifests/dapr-configuration.yaml
-apiVersion: dapr.io/v1alpha1
-kind: Configuration
-metadata:
-  name: mathtrail-observability
-spec:
-  tracing:
-    samplingRate: "1"
-    zipkin:
-      endpointAddress: "http://otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:9411/api/v2/spans"
+# Example: service tracing configuration
+env:
+  - name: OTEL_ENDPOINT
+    value: "otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4317"
 ```
 
 ### Pyroscope Profiling (Go Services)
@@ -98,7 +92,7 @@ func main() {
 
 | Service | DNS | Port | Usage |
 |---------|-----|------|-------|
-| OTel Collector | `otel-collector-opentelemetry-collector.monitoring.svc.cluster.local` | 9411 | Dapr Zipkin traces |
+| OTel Collector | `otel-collector-opentelemetry-collector.monitoring.svc.cluster.local` | 9411 | Zipkin traces |
 | OTel Collector | `otel-collector-opentelemetry-collector.monitoring.svc.cluster.local` | 4317 | OTLP gRPC |
 | OTel Collector | `otel-collector-opentelemetry-collector.monitoring.svc.cluster.local` | 4318 | OTLP HTTP |
 | Grafana | `lgtm-grafana.monitoring.svc.cluster.local` | 80 | Dashboard UI |
@@ -162,13 +156,9 @@ kubectl logs -n monitoring deployment/otel-collector-opentelemetry-collector
 # - Config error: Review values/otel-collector-values.yaml
 ```
 
-### Dapr Not Sending Traces
+### Services Not Sending Traces
 
 ```bash
-# Check configuration
-kubectl get configuration -n mathtrail
-kubectl describe configuration mathtrail-observability -n mathtrail
-
 # Test connectivity from mathtrail namespace
 kubectl run -n mathtrail -it --rm debug --image=busybox --restart=Never -- sh
 # Inside pod:

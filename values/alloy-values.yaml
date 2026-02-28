@@ -1,4 +1,5 @@
-# Alloy collectors (k8s-monitoring)
+# Grafana k8s-monitoring (Alloy collectors)
+# Backends (Loki, Grafana, Tempo, Mimir) are deployed as separate Helm releases.
 
 cluster:
   name: "mathtrail-local"

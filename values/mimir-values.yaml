@@ -1,0 +1,68 @@
+# Mimir — metrics storage backend (monolithic mode for dev)
+fullnameOverride: mimir
+
+deploymentMode: monolithic
+
+monolithic:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 5Gi
+
+mimir:
+  structuredConfig:
+    server:
+      http_listen_port: 9009
+      grpc_listen_port: 9095
+
+    # Disable Kafka-based ingest (default in Mimir 3.0) — not needed for dev
+    ingest_storage:
+      enabled: false
+
+    # Re-enable classic Push gRPC (chart disables it for Kafka ingest path)
+    ingester:
+      push_grpc_method_enabled: true
+
+    limits:
+      max_query_lookback: 720h
+      max_query_parallelism: 32
+
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /data/mimir
+
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/blocks
+      tsdb:
+        dir: /data/tsdb
+        retention_period: 168h
+
+    compactor:
+      data_dir: /data/compactor
+
+# Disable components not needed in monolithic mode
+ingester:
+  zoneAwareReplication:
+    enabled: false
+
+store_gateway:
+  zoneAwareReplication:
+    enabled: false
+
+ruler:
+  enabled: false
+
+alertmanager:
+  enabled: false
+
+# Kafka not needed — using classic write path
+kafka:
+  enabled: false
+
+# Gateway not needed — monolithic exposes all APIs directly
+nginx:
+  enabled: false
