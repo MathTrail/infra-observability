@@ -6,7 +6,7 @@ metadata:
 deploy:
   helm:
     releases:
-      # Namespace, network policies, Dapr config
+      # Namespace, network policies
       - name: infra-base
         chartPath: manifests/
         wait: true
@@ -94,7 +94,7 @@ deploy:
         valuesFiles:
           - values/pyroscope-values.yaml
 
-      # 7. OTel Collector — receives from Dapr, sends to Alloy
+      # 7. OTel Collector — receives from services, sends to Alloy
       - name: otel-collector
         repo: "{{.CHARTS_REPO}}"
         remoteChart: opentelemetry-collector

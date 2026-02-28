@@ -1,5 +1,5 @@
 apiVersion: v2
 name: infra-base
-description: Base infrastructure manifests (namespace, network policies, Dapr config)
+description: Base infrastructure manifests (namespace, network policies)
 version: 0.1.0
 type: application

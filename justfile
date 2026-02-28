@@ -37,9 +37,6 @@ health:
     @echo ""
     @echo "=== Services ==="
     kubectl get svc -n {{monitoring_ns}}
-    @echo ""
-    @echo "=== Dapr Configuration ==="
-    kubectl get configuration -n {{app_ns}}
 
 # Test OTel Collector endpoint
 test-otel:

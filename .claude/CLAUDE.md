@@ -1,16 +1,16 @@
 # Identity & Context
 You are working on mathtrail-infra-observability — the observability stack for MathTrail.
 Deploys OpenTelemetry Collector, Grafana LGTM (Loki, Grafana, Tempo, Mimir), and Pyroscope.
-OTel Collector is the smart gateway for Dapr telemetry data.
+OTel Collector is the smart gateway for application telemetry data.
 
 Tech Stack: Helm, OpenTelemetry, Grafana LGTM, Pyroscope, Strimzi
 Namespace: monitoring
 
 # Communication Map
-OTel Collector receives from: All Dapr sidecars (Zipkin traces, OTLP metrics/logs)
+OTel Collector receives from: All application pods (Zipkin traces, OTLP metrics/logs)
 OTel Collector exports to: Grafana Alloy (OTLP) → Loki/Tempo/Mimir
 Pyroscope: Go services push profiling data directly
-Dapr config: zipkin endpoint at otel-collector.monitoring.svc.cluster.local:9411
+Zipkin endpoint: otel-collector.monitoring.svc.cluster.local:9411
 
 # Development Standards
 - OTel Collector config must use k8sattributes processor for metadata enrichment

@@ -1,5 +1,5 @@
 # OpenTelemetry Collector for MathTrail
-# Role: Smart gateway between Dapr sidecars and Grafana LGTM stack
+# Role: Smart gateway between application services and Grafana LGTM stack
 
 mode: deployment
 
@@ -39,7 +39,7 @@ ports:
     servicePort: 4318
     protocol: TCP
 
-  # Zipkin (for Dapr)
+  # Zipkin
   zipkin:
     enabled: true
     containerPort: 9411
@@ -71,7 +71,7 @@ config:
         http:
           endpoint: 0.0.0.0:4318
 
-    # Zipkin receiver for Dapr traces
+    # Zipkin receiver for traces
     zipkin:
       endpoint: 0.0.0.0:9411
 

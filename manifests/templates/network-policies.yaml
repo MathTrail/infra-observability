@@ -91,7 +91,7 @@ spec:
         - protocol: TCP
           port: 4318  # OTLP HTTP
         - protocol: TCP
-          port: 9411  # Zipkin (Dapr)
+          port: 9411  # Zipkin
 
 ---
 # Allow Alloy ({{ $monitoring }}) to scrape Prometheus metrics from {{ $ns }} pods,
