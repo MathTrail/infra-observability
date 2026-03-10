@@ -14,6 +14,3 @@ Thumbs.db
 # Temporary
 *.tmp
 *.log
-
-# Skaffold
-skaffold.env

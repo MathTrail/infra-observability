@@ -1,18 +1,18 @@
 # MathTrail Observability Stack
+# Deployment is managed exclusively by ArgoCD (mathtrail-observability-* Applications).
 
 monitoring_ns := env("MONITORING_NAMESPACE", "monitoring")
 app_ns := env("NAMESPACE", "mathtrail")
 
-# Deploy observability stack
-deploy:
-    skaffold run
+# Trigger ArgoCD sync for all observability Applications
+sync:
+    argocd app sync mathtrail-observability-base
+    argocd app sync mathtrail-observability-loki mathtrail-observability-tempo mathtrail-observability-mimir
+    argocd app sync mathtrail-observability-grafana mathtrail-observability-alloy mathtrail-observability-pyroscope mathtrail-observability-otel-collector
 
-# Delete observability stack and namespace
-delete:
-    skaffold delete
-    kubectl delete namespace {{monitoring_ns}} --wait --timeout=120s
-    @echo "Waiting for namespace to fully terminate..."
-    kubectl wait --for=delete namespace/{{monitoring_ns}} --timeout=120s 2>/dev/null || true
+# Show status of all observability Applications
+status:
+    argocd app list -l app.kubernetes.io/part-of=mathtrail | grep observability
 
 # Port-forward to Grafana
 grafana:
